@@ -25,4 +25,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: kustomize build config/default
+      - uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        id: metadata
+        with:
+          images: ghcr.io/${{ github.repository }}/manifests
+          # Return single tag
+          flavor: latest=false
+      - run: kustomize build config/default > manifest.yaml
+      - run: oras push "$TAG" manifest.yaml
+        env:
+          TAG: ${{ steps.metadata.outputs.tags }}

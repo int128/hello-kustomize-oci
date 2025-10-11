@@ -32,7 +32,6 @@ jobs:
           # Return single tag
           flavor: latest=false
       - run: kustomize build config/default > manifest.yaml
-      - run: oras push --export-manifest manifest.json "$TAG" manifest.yaml
+      - run: oras push --format json "$TAG" manifest.yaml | tee push.json
         env:
           TAG: ${{ steps.metadata.outputs.tags }}
-      - run: jq . manifest.json

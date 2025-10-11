@@ -25,5 +25,5 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: kustomize build config/default > "$RUNNER_TEMP/manifest.yaml"
-      - run: oras push "oci://ghcr.io/$GITHUB_REPOSITORY/manifests:latest" "$RUNNER_TEMP/manifest.yaml"
+      - run: kustomize build config/default > manifest.yaml
+      - run: oras push "oci://ghcr.io/$GITHUB_REPOSITORY/manifests:latest" manifest.yaml

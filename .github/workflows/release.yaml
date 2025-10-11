@@ -26,4 +26,4 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: kustomize build config/default > manifest.yaml
-      - run: oras push "oci://ghcr.io/$GITHUB_REPOSITORY/manifests:latest" manifest.yaml
+      - run: oras push "ghcr.io/$GITHUB_REPOSITORY/manifests:latest" manifest.yaml

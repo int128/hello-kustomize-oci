@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: aquaproj/aqua-installer@ea518c135a02fc11ff8024364510c181a5c6b342 # v4.0.3
@@ -32,6 +33,15 @@ jobs:
           # Return single tag
           flavor: latest=false
       - run: kustomize build config/default > manifest.yaml
-      - run: oras push --format json "$TAG" manifest.yaml | tee push.json
+      - id: push
+        run: |
+          {
+            echo "result<<EOF"
+            oras push --format=json "$IMAGE" manifest.yaml
+            echo "EOF"
+          } | tee -a "$GITHUB_OUTPUT"
         env:
-          TAG: ${{ steps.metadata.outputs.tags }}
+          IMAGE: ${{ steps.metadata.outputs.tags }}
+      - run: cosign sign --yes "$IMAGE"
+        env:
+          IMAGE: ${{ steps.metadata.outputs.tags }}@${{ fromJson(steps.push.outputs.result).digest }}

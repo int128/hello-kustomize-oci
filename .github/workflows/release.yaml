@@ -38,13 +38,15 @@ jobs:
       - run: kustomize build config/default > manifest.yaml
       - id: push
         run: |
+          echo "$ANNOTATIONS" > "$RUNNER_TEMP/annotations"
           {
             echo "result<<EOF"
-            oras push --format=json "$IMAGE" manifest.yaml
+            oras push --format=json --annotation-file="$RUNNER_TEMP/annotations" "$IMAGE" manifest.yaml
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
         env:
           IMAGE: ${{ steps.metadata.outputs.tags }}
+          ANNOTATIONS: ${{ steps.metadata.outputs.annotations }}
       - run: cosign sign --yes "$IMAGE"
         env:
           IMAGE: ${{ steps.metadata.outputs.tags }}@${{ fromJson(steps.push.outputs.result).digest }}

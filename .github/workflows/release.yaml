@@ -72,7 +72,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: cosign verify --certificate-identity=name@example.com --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE"
+      - run: |
+          cosign verify \
+            --certificate-identity-regexp='https://github.com/int128/hello-kustomize-oci/.github/workflows/release.yaml@refs/.+' \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            "$IMAGE"
         env:
           IMAGE: ${{ needs.manifest.outputs.image-uri }}
       - run: oras pull "$IMAGE"

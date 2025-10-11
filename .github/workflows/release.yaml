@@ -40,13 +40,19 @@ jobs:
       - run: kustomize build config/default > manifest.yaml
       - id: push
         run: |
+          set -euo pipefail
+          annotations_args=()
+          while read -r line; do
+            annotations_args+=("--annotation=${line}")
+          done <<< "$ANNOTATIONS"
           {
             echo "result<<EOF"
-            oras push --format=json "$IMAGE" manifest.yaml
+            oras push --format=json "${annotations_args[@]}" "$IMAGE" manifest.yaml
             echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
         env:
           IMAGE: ${{ steps.metadata.outputs.tags }}
+          ANNOTATIONS: ${{ steps.metadata.outputs.annotations }}
       - run: cosign sign --yes "$IMAGE"
         env:
           IMAGE: ${{ steps.metadata.outputs.tags }}@${{ fromJson(steps.push.outputs.result).digest }}

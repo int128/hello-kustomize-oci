@@ -9,50 +9,7 @@ on:
   pull_request:
 
 jobs:
-  manifest:
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    outputs:
-      image-uri: ${{ steps.metadata.outputs.tags }}@${{ fromJson(steps.push.outputs.result).digest }}
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: aquaproj/aqua-installer@ea518c135a02fc11ff8024364510c181a5c6b342 # v4.0.3
-        with:
-          aqua_version: v2.43.1
-      - run: kustomize version
-      - run: oras version
-      - run: cosign version
-      - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
-        id: metadata
-        with:
-          images: ghcr.io/${{ github.repository }}/manifests
-          # Return single tag
-          flavor: latest=false
-      - run: kustomize build config/default > manifest.yaml
-      - id: push
-        run: |
-          {
-            echo "result<<EOF"
-            oras push --format=json "$IMAGE" manifest.yaml
-            echo "EOF"
-          } | tee -a "$GITHUB_OUTPUT"
-        env:
-          IMAGE: ${{ steps.metadata.outputs.tags }}
-      - run: cosign sign --yes "$IMAGE"
-        env:
-          IMAGE: ${{ steps.metadata.outputs.tags }}@${{ fromJson(steps.push.outputs.result).digest }}
-
-  verify:
-    needs: manifest
+  pull:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
@@ -61,25 +18,54 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: aquaproj/aqua-installer@ea518c135a02fc11ff8024364510c181a5c6b342 # v4.0.3
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          aqua_version: v2.43.1
+          repository: kubernetes-sigs/kustomize
+          ref: refs/pull/6017/merge
+          path: kustomize
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: kustomize/go.work
+          cache-dependency-path: kustomize/go.work.sum
+      - run: make kustomize
+        working-directory: kustomize
       - run: kustomize version
-      - run: oras version
-      - run: cosign version
+
       - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
-          cosign verify \
-            --certificate-identity-regexp='https://github.com/int128/hello-kustomize-oci/.github/workflows/release.yaml@refs/.+' \
-            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            "$IMAGE"
-        env:
-          IMAGE: ${{ needs.manifest.outputs.image-uri }}
-      - run: oras pull "$IMAGE"
-        env:
-          IMAGE: ${{ needs.manifest.outputs.image-uri }}
-      - run: yq . manifest.yaml
+      - run: kustomize build
+
+  publish:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: kubernetes-sigs/kustomize
+          ref: refs/pull/6017/merge
+          path: kustomize
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: kustomize/go.work
+          cache-dependency-path: kustomize/go.work.sum
+      - run: make kustomize
+        working-directory: kustomize
+      - run: kustomize version
+
+      - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: kustomize build config/default > manifest.yaml
+      - run: kustomize publish ghcr.io/${{ github.repository }}/manifests

@@ -1,2 +1,2 @@
 resources:
-  - oci://ghcr.io/int128/hello-kustomize-oci/manifests:latest
+  - oci://ghcr.io/int128/hello-kustomize-oci/manifests:main

@@ -9,11 +9,9 @@ on:
   pull_request:
 
 jobs:
-  manifest:
+  publish:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    outputs:
-      image-uri: ${{ steps.metadata.outputs.tags }}@${{ fromJson(steps.push.outputs.result).digest }}
     permissions:
       contents: read
       packages: write
@@ -42,8 +40,7 @@ jobs:
       - run: kustomize build config/default > manifest.yaml
       - run: kustomize publish ghcr.io/${{ github.repository }}/manifests
 
-  verify:
-    needs: manifest
+  pull:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
